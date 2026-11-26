@@ -7,7 +7,8 @@ import java.util.Map;
 public class Checkout {
     record CatalogEntry(String name, int price) {} // price in cents
     record OrderItem(String productId, int quantity, int price) {}
-    record OrderRequest(List<OrderItem> items) {}
+    record OrderRequestItem(String productId, int quantity) {}
+    record OrderRequest(List<OrderRequestItem> items) {}
     record Order(String id, List<OrderItem> items, int total) {}
 
     // Product catalog.
@@ -21,10 +22,24 @@ public class Checkout {
     // Create an order from a request, store it, and return it.
     static Order createOrder(String id, OrderRequest request) {
         int total = 0;
-        for (OrderItem item : request.items()) {
-            total += item.quantity() * item.price();
+        List<OrderItem> items = new ArrayList<>();
+        for (OrderRequestItem requestedItem : request.items()) {
+            CatalogEntry catalogEntry = CATALOG.get(requestedItem.productId());
+            if (catalogEntry == null) {
+                throw new IllegalArgumentException("Unknown product: " + requestedItem.productId());
+            }
+
+            if (requestedItem.quantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be positive");
+            }
+
+            OrderItem item = new OrderItem(
+                requestedItem.productId(), requestedItem.quantity(), catalogEntry.price()
+            );
+            items.add(item);
+            total = Math.addExact(total, Math.multiplyExact(item.quantity(), item.price()));
         }
-        Order order = new Order(id, request.items(), total);
+        Order order = new Order(id, items, total);
         ORDERS.add(order);
         return order;
     }

@@ -4,7 +4,8 @@ using System.Collections.Generic;
 
 public record CatalogEntry(string Name, int Price); // price in cents
 public record OrderItem(string ProductId, int Quantity, int Price);
-public record OrderRequest(List<OrderItem> Items);
+public record OrderRequestItem(string ProductId, int Quantity);
+public record OrderRequest(List<OrderRequestItem> Items);
 public record Order(string Id, List<OrderItem> Items, int Total);
 
 public static class Checkout
@@ -22,11 +23,24 @@ public static class Checkout
     public static Order CreateOrder(string id, OrderRequest request)
     {
         int total = 0;
-        foreach (var item in request.Items)
+        var items = new List<OrderItem>();
+        foreach (var requestedItem in request.Items)
         {
-            total += item.Quantity * item.Price;
+            if (!Catalog.TryGetValue(requestedItem.ProductId, out var catalogEntry))
+            {
+                throw new ArgumentException($"Unknown product: {requestedItem.ProductId}");
+            }
+
+            if (requestedItem.Quantity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(requestedItem.Quantity), "Quantity must be positive");
+            }
+
+            var item = new OrderItem(requestedItem.ProductId, requestedItem.Quantity, catalogEntry.Price);
+            items.Add(item);
+            total = checked(total + checked(item.Quantity * item.Price));
         }
-        var order = new Order(id, request.Items, total);
+        var order = new Order(id, items, total);
         Orders.Add(order);
         return order;
     }
