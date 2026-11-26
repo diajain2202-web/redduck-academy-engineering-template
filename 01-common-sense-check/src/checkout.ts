@@ -3,7 +3,8 @@
 
 export interface CatalogEntry { name: string; price: number } // price in cents
 export interface OrderItem { productId: string; quantity: number; price: number }
-export interface OrderRequest { items: OrderItem[] }
+export interface OrderRequestItem { productId: string; quantity: number }
+export interface OrderRequest { items: OrderRequestItem[] }
 export interface Order { id: string; items: OrderItem[]; total: number }
 
 // Product catalog.
@@ -16,11 +17,26 @@ const orders: Order[] = [];
 
 // Create an order from a request, store it, and return it.
 export function createOrder(id: string, request: OrderRequest): Order {
+  const items: OrderItem[] = request.items.map(({ productId, quantity }) => {
+    if (!Object.prototype.hasOwnProperty.call(CATALOG, productId)) {
+      throw new Error(`Unknown product: ${productId}`);
+    }
+
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+      throw new RangeError("Quantity must be a positive safe integer");
+    }
+
+    return { productId, quantity, price: CATALOG[productId].price };
+  });
+
   let total = 0;
-  for (const item of request.items) {
+  for (const item of items) {
     total += item.quantity * item.price;
+    if (!Number.isSafeInteger(total)) {
+      throw new RangeError("Order total exceeds the safe integer range");
+    }
   }
-  const order: Order = { id, items: request.items, total };
+  const order: Order = { id, items, total };
   orders.push(order);
   return order;
 }
