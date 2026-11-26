@@ -11,12 +11,24 @@ _orders = []
 
 
 def create_order(order_id, request):
-    """request = {"items": [{"productId": str, "quantity": int, "price": int}, ...]}.
+    """request = {"items": [{"productId": str, "quantity": int}, ...]}.
     Creates an order, stores it, and returns it."""
     total = 0
-    for item in request["items"]:
-        total += item["quantity"] * item["price"]
-    order = {"id": order_id, "items": request["items"], "total": total}
+    items = []
+    for requested_item in request["items"]:
+        product_id = requested_item["productId"]
+        if product_id not in CATALOG:
+            raise ValueError(f"Unknown product: {product_id}")
+
+        quantity = requested_item["quantity"]
+        if type(quantity) is not int or quantity <= 0:
+            raise ValueError("Quantity must be a positive integer")
+
+        price = CATALOG[product_id]["price"]
+        items.append({"productId": product_id, "quantity": quantity, "price": price})
+        total += quantity * price
+
+    order = {"id": order_id, "items": items, "total": total}
     _orders.append(order)
     return order
 
