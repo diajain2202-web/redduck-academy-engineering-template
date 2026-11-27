@@ -3,21 +3,28 @@
 ## Language
 
 <!-- Keep only the language you completed. Delete the others so a single value is left, e.g. language: "python" -->
-language: "typescript" | "python" | "java" | "csharp"
+language: "python"
 
 ## The attack
 
-Describe, as a short sequence of steps, what a rational adversary does through the public interface
-to end with points they were never given. Name the starting balances, the exact call you make, and
-the ending balances.
+The attacker starts with 0 points and the victim with 100. The attacker calls
+`transfer("attacker", "victim", -50)`. Although the call appears to transfer from attacker to
+victim, subtracting a negative amount credits the attacker and adding it debits the victim. The
+ending balances are attacker: 50 and victim: 50.
 
 ## Why it works at the design level
 
-Explain the cause at the level of the design. Which value does the caller control that the system
-should have controlled itself, and what does that let the caller do?
+The API lets the caller choose any signed integer as an amount, while the implementation assumes
+that amount is nonnegative. Its insufficient-funds check (`available < amount`) only protects
+against spending too much when the amount is positive; a negative amount passes and reverses the
+meaning of both balance updates. This is a mismatch between the public operation's accepted
+values and its intended invariant, not a missing authorization check.
 
 ## Patch or elimination?
 
-State your fix and classify it. Does it patch the attack, by rejecting the bad input at runtime, or
-eliminate the condition, by making the bad input impossible to express at all? Say which, and why
-removing the condition is stronger than guarding it.
+Rejecting amounts less than or equal to zero at the transfer boundary would patch this attack with
+a runtime guard, but would leave signed values expressible and require the guard to remain
+correct on every path. A stronger design makes the transfer operation accept only a validated
+positive-amount type, constructed at the boundary, so negative amounts cannot be passed to the
+ledger operation at all. That removes the condition that gives this attack its leverage instead
+of relying only on checking it.
