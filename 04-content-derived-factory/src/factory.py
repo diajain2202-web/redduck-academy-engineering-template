@@ -2,22 +2,29 @@
 # A content-derived factory. Fill in create() and derive(). No framework required.
 # Run with: python3 src/factory.py
 
+import hashlib
+import json
 
 
 def create(content):
     """content is a dict of string fields, e.g. {"title": ..., "body": ..., "author": ...}.
     Return {"content": content, "id": <id>}, where id is derived from the content alone.
     """
-    # TODO: return an item holding the content and an id derived from its content (use derive).
-    raise NotImplementedError
+    item_content = dict(content)
+    return {"content": item_content, "id": derive(item_content)}
 
 
 def derive(content):
     """Recompute the id from the content alone, with no registry and no shared state,
     so the demo passes.
     """
-    # TODO
-    raise NotImplementedError
+    canonical_content = json.dumps(
+        content,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical_content).hexdigest()
 
 
 def demo():
